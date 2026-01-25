@@ -46,6 +46,7 @@
     "@effect/cli": "^0.73.1",
     "@effect/platform": "^0.94.2",
     "@effect/platform-bun": "^0.87.1",
+    "arkregex": "^0.0.5",
     "effect": "^3.19.15",
     "yargs": "^18.0.0"
   },
