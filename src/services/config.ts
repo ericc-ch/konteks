@@ -2,6 +2,7 @@ import { FileSystem, Path } from "@effect/platform"
 import { Data, Effect, Schema } from "effect"
 
 export class ConfigSchema extends Schema.Class<ConfigSchema>("ConfigSchema")({
+  dir: Schema.String.pipe(Schema.optional),
   repos: Schema.Array(Schema.String),
 }) {}
 
