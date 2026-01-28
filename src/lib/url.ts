@@ -4,7 +4,7 @@ const githubUrlRegex = regex(
   "(?:https://|git@)github\\.com[/:](?<owner>[^/]+)/(?<repo>[^/]+?)(?:\\.git)?$",
 )
 
-export const parseGithubUrl = async (url: string) => {
+export const parseGithubUrl = (url: string) => {
   const match = url.match(githubUrlRegex)
   if (!match || !match.groups) {
     throw new Error(`Invalid GitHub URL: ${url}`)

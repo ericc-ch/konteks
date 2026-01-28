@@ -29,7 +29,7 @@ export class Git extends Effect.Service<Git>()("Git", {
 
     return {
       clone: Effect.fn(function* (url: string) {
-        const { repo: repoName } = yield* parseGithubUrl(url)
+        const { repo: repoName } = parseGithubUrl(url)
         const command = Command.make(
           "git",
           "clone",
@@ -47,7 +47,7 @@ export class Git extends Effect.Service<Git>()("Git", {
       }),
 
       pull: Effect.fn(function* (url: string) {
-        const { repo: repoName } = yield* parseGithubUrl(url)
+        const { repo: repoName } = parseGithubUrl(url)
         const command = Command.make(
           "git",
           "-C",
@@ -65,7 +65,7 @@ export class Git extends Effect.Service<Git>()("Git", {
       }),
 
       checkStatus: Effect.fn(function* (url: string) {
-        const { repo: repoName } = yield* parseGithubUrl(url)
+        const { repo: repoName } = parseGithubUrl(url)
         const dirPath = `${targetDir}/${repoName}`
 
         const dirCommand = Command.make("test", "-d", dirPath)
