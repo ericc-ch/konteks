@@ -34,19 +34,19 @@ describe("parseGithubUrl", () => {
     expect(result).toEqual({ owner: "owner", repo: "my-awesome-repo" })
   })
 
-  it("throws on non-GitHub URL", async () => {
-    expect(parseGithubUrl("https://gitlab.com/owner/repo")).rejects.toThrow()
+  it("throws on non-GitHub URL", () => {
+    expect(() => parseGithubUrl("https://gitlab.com/owner/repo")).toThrow()
   })
 
-  it("throws on invalid URL format", async () => {
-    expect(parseGithubUrl("not-a-url")).rejects.toThrow()
+  it("throws on invalid URL format", () => {
+    expect(() => parseGithubUrl("not-a-url")).toThrow()
   })
 
-  it("throws on empty string", async () => {
-    expect(parseGithubUrl("")).rejects.toThrow()
+  it("throws on empty string", () => {
+    expect(() => parseGithubUrl("")).toThrow()
   })
 
-  it("throws on URL with only owner", async () => {
-    expect(parseGithubUrl("https://github.com/owner")).rejects.toThrow()
+  it("throws on URL with only owner", () => {
+    expect(() => parseGithubUrl("https://github.com/owner")).toThrow()
   })
 })
