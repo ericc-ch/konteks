@@ -1,32 +1,27 @@
 {
-  "name": "pkg-placeholder",
+  "name": "konteks",
   "version": "0.0.1",
   "description": "_description_",
   "keywords": [
-    "pkg-placeholder"
+    "konteks"
   ],
-  "homepage": "https://github.com/ericc-ch/pkg-placeholder",
-  "bugs": "https://github.com/ericc-ch/pkg-placeholder/issues",
+  "homepage": "https://github.com/ericc-ch/konteks",
+  "bugs": "https://github.com/ericc-ch/konteks/issues",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ericc-ch/pkg-placeholder.git"
+    "url": "https://github.com/ericc-ch/konteks.git"
   },
   "author": {
     "name": "Erick Christian",
     "email": "erickchristian48@gmail.com"
   },
   "type": "module",
-  "exports": {
-    ".": {
-      "types": "./dist/main.d.ts",
-      "default": "./dist/main.js"
-    }
-  },
   "bin": {
-    "pkg-placeholder": "./dist/cli.js"
+    "konteks": "./dist/cli.mjs"
   },
   "files": [
-    "dist"
+    "dist",
+    "src"
   ],
   "scripts": {
     "build": "tsdown",
