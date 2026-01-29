@@ -29,7 +29,7 @@
     "lint": "oxlint --type-aware",
     "prepare": "simple-git-hooks && bun run start sync",
     "prepack": "bun run build",
-    "release": "bumpp && npm publish",
+    "release": "bumpp",
     "start": "bun src/cli.ts",
     "typecheck": "tsgo"
   },
