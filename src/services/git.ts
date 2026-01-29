@@ -44,6 +44,9 @@ export class Git extends Effect.Service<Git>()("Git", {
       const { exitCode, stderr, stdout } = yield* Command.make(
         "git",
         "clone",
+        "--depth",
+        "1",
+        "--single-branch",
         url,
         `${targetDir}/${repo}`,
       ).pipe(runGitCommand)

@@ -17,20 +17,23 @@ export class Config extends Effect.Service<Config>()("Config", {
     const cwd = process.cwd()
     const configPath = path.join(cwd, "konteks.json")
 
-    return {
-      load: Effect.gen(function* () {
-        const exists = yield* fs.exists(configPath)
-
-        if (!exists) {
+    // Load config during service construction
+    const config = yield* Effect.if(fs.exists(configPath), {
+      onTrue: () =>
+        Effect.gen(function* () {
+          const content = yield* fs.readFileString(configPath)
+          yield* Effect.log("Config file found at", configPath)
+          return yield* Schema.decodeUnknown(JsonSchema)(content)
+        }),
+      onFalse: () =>
+        Effect.gen(function* () {
           yield* Effect.log("Config file not found at", configPath)
           return defaultConfig
-        }
+        }),
+    })
 
-        const content = yield* fs.readFileString(configPath)
-        yield* Effect.log("Config file found at", configPath)
-
-        return yield* Schema.decodeUnknown(JsonSchema)(content)
-      }),
+    return {
+      load: Effect.succeed(config),
 
       save: Effect.gen(function* () {
         const exists = yield* fs.exists(configPath)
