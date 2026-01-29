@@ -1,19 +1,52 @@
-// Import necessary modules from the libraries
-import { Args, Command, Options } from "@effect/cli"
+import { Command } from "@effect/cli"
 import { BunContext, BunRuntime } from "@effect/platform-bun"
-import { Console, Effect, pipe } from "effect"
+import { Effect, Layer, pipe } from "effect"
 
-const text = Args.text({ name: "text" })
-const bold = Options.boolean("bold").pipe(Options.withAlias("b"))
+import packageJson from "../package.json"
+import { Config } from "./services/config"
+import { Git } from "./services/git"
 
-const command = Command.make("hello-world", { text, bold }, (args) =>
-  Console.log("Hello World", args.text, args.bold ? "bold" : "normal"),
+const init = Command.make("init", {}, () =>
+  Effect.gen(function* () {
+    const config = yield* Config
+    yield* config.save
+  }),
 )
 
-// Set up the CLI application
-const cli = Command.run(command, {
-  name: "Hello World CLI",
-  version: "v1.0.0",
+const sync = Command.make("sync", {}, () =>
+  Effect.gen(function* () {
+    const config = yield* Config
+    const git = yield* Git
+    const { repos } = yield* config.load
+
+    if (repos.length === 0) {
+      yield* Effect.log("No repos configured. Add repos to konteks.json")
+      return
+    }
+
+    yield* Effect.all(
+      repos.map((url) => git.sync(url)),
+      { concurrency: "unbounded" },
+    )
+  }),
+)
+
+const konteks = Command.make("konteks").pipe(
+  Command.withSubcommands([init, sync]),
+)
+
+const cli = Command.run(konteks, {
+  name: "konteks",
+  version: `v${packageJson.version}`,
 })
 
-pipe(cli(process.argv), Effect.provide(BunContext.layer), BunRuntime.runMain)
+const ConfigLive = Config.Default.pipe(Layer.provide(BunContext.layer))
+
+const GitLive = Git.Default.pipe(
+  Layer.provide(ConfigLive),
+  Layer.provide(BunContext.layer),
+)
+
+const MainLayer = Layer.mergeAll(ConfigLive, GitLive, BunContext.layer)
+
+pipe(cli(process.argv), Effect.provide(MainLayer), BunRuntime.runMain)

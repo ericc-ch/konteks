@@ -7,7 +7,7 @@ export class ConfigSchema extends Schema.Class<ConfigSchema>("ConfigSchema")({
 }) {}
 
 const defaultConfig = new ConfigSchema({ dir: ".context/", repos: [] })
-const JsonSchema = Schema.parseJson(ConfigSchema)
+const JsonSchema = Schema.parseJson(ConfigSchema, { space: 2 })
 
 export class Config extends Effect.Service<Config>()("Config", {
   effect: Effect.gen(function* () {
@@ -15,7 +15,7 @@ export class Config extends Effect.Service<Config>()("Config", {
     const path = yield* Path.Path
 
     const cwd = process.cwd()
-    const configPath = path.join(cwd, "lazycontext.json")
+    const configPath = path.join(cwd, "konteks.json")
 
     return {
       load: Effect.gen(function* () {
@@ -30,6 +30,17 @@ export class Config extends Effect.Service<Config>()("Config", {
         yield* Effect.log("Config file found at", configPath)
 
         return yield* Schema.decodeUnknown(JsonSchema)(content)
+      }),
+
+      save: Effect.gen(function* () {
+        const exists = yield* fs.exists(configPath)
+        if (exists) {
+          yield* Effect.log("Config file already exists at", configPath)
+          return
+        }
+        const content = yield* Schema.encode(JsonSchema)(defaultConfig)
+        yield* fs.writeFileString(configPath, content)
+        yield* Effect.log("Config file created at", configPath)
       }),
     }
   }),

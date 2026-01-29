@@ -1,110 +1,90 @@
-import { Command, CommandExecutor, Path } from "@effect/platform"
-import { Data, Effect, Schema } from "effect"
+import { Command, CommandExecutor, FileSystem, Path } from "@effect/platform"
+import { Data, Effect, Stream, pipe } from "effect"
 import { parseGithubUrl } from "../lib/url"
-
-export const RepoStatus = Schema.Union(
-  Schema.Struct({ state: Schema.Literal("missing") }),
-  Schema.Struct({ state: Schema.Literal("up to date") }),
-  Schema.Struct({
-    state: Schema.Literal("behind"),
-    commitCount: Schema.Number,
-  }),
-  Schema.Struct({ state: Schema.Literal("modified") }),
-)
-
-export type RepoStatus = typeof RepoStatus.Type
+import { Config } from "./config"
 
 export class GitError extends Data.TaggedError("GitError")<{
   readonly message: string
-  readonly exitCode?: number
+  readonly exitCode: number
 }> {}
 
 export class Git extends Effect.Service<Git>()("Git", {
   effect: Effect.gen(function* () {
     const executor = yield* CommandExecutor.CommandExecutor
+    const fs = yield* FileSystem.FileSystem
     const path = yield* Path.Path
 
-    const cwd = yield* Effect.sync(() => process.cwd())
-    const targetDir = path.join(cwd, ".context/")
+    const config = yield* Config
+    const { dir } = yield* config.load
 
-    return {
-      clone: Effect.fn(function* (url: string) {
-        const { repo: repoName } = parseGithubUrl(url)
-        const command = Command.make(
-          "git",
-          "clone",
-          "--quiet",
-          url,
-          `${targetDir}/${repoName}`,
-        )
-        const result = yield* executor.exitCode(command)
-        if (result !== 0) {
-          return yield* new GitError({
-            message: `Failed to clone ${url}`,
-            exitCode: result,
-          })
-        }
-      }),
+    const cwd = process.cwd()
+    const targetDir = path.join(cwd, dir)
 
-      pull: Effect.fn(function* (url: string) {
-        const { repo: repoName } = parseGithubUrl(url)
-        const command = Command.make(
-          "git",
-          "-C",
-          `${targetDir}/${repoName}`,
-          "pull",
-          "--quiet",
-        )
-        const result = yield* executor.exitCode(command)
-        if (result !== 0) {
-          return yield* new GitError({
-            message: `Failed to pull ${url}`,
-            exitCode: result,
-          })
-        }
-      }),
+    const runGitCommand = Effect.fn(function* (command: Command.Command) {
+      const process = yield* executor.start(command)
+      const [stdout, stderr, exitCode] = yield* Effect.all([
+        pipe(
+          process.stdout,
+          Stream.decodeText(),
+          Stream.runFold("", (acc, chunk) => acc + chunk),
+        ),
+        pipe(
+          process.stderr,
+          Stream.decodeText(),
+          Stream.runFold("", (acc, chunk) => acc + chunk),
+        ),
+        process.exitCode,
+      ])
 
-      checkStatus: Effect.fn(function* (url: string) {
-        const { repo: repoName } = parseGithubUrl(url)
-        const dirPath = `${targetDir}/${repoName}`
+      return { stdout, stderr, exitCode }
+    }, Effect.scoped)
 
-        const dirCommand = Command.make("test", "-d", dirPath)
-        const dirResult = yield* executor.exitCode(dirCommand)
+    const clone = Effect.fn(function* (url: string) {
+      const { repo } = parseGithubUrl(url)
+      const { exitCode, stderr } = yield* Command.make(
+        "git",
+        "clone",
+        url,
+        `${targetDir}/${repo}`,
+      ).pipe(runGitCommand)
 
-        if (dirResult !== 0) {
-          return { state: "missing" } as const
-        }
+      if (exitCode !== 0) {
+        return yield* new GitError({
+          message: `Failed to clone ${url}: ${stderr}`,
+          exitCode,
+        })
+      }
+    })
 
-        const statusCommand = Command.make(
-          "git",
-          "-C",
-          dirPath,
-          "status",
-          "--porcelain",
-        )
-        const statusOutput = yield* executor.string(statusCommand)
+    const pull = Effect.fn(function* (url: string) {
+      const { repo: repoName } = parseGithubUrl(url)
+      const { exitCode, stderr } = yield* Command.make(
+        "git",
+        "-C",
+        `${targetDir}/${repoName}`,
+        "pull",
+      ).pipe(runGitCommand)
 
-        if (statusOutput.trim() !== "") {
-          return { state: "modified" } as const
-        }
+      if (exitCode !== 0) {
+        return yield* new GitError({
+          message: `Failed to pull ${url}: ${stderr}`,
+          exitCode,
+        })
+      }
+    })
 
-        const countCommand = Command.make(
-          "git",
-          "-C",
-          dirPath,
-          "rev-list",
-          "--count",
-          "HEAD..origin/main",
-        )
-        const countResult = yield* executor.string(countCommand)
-        const commitCount = Number.parseInt(countResult.trim(), 10)
+    const sync = Effect.fn(function* (url: string) {
+      const { repo: repoName } = parseGithubUrl(url)
+      const dirPath = `${targetDir}/${repoName}`
 
-        if (commitCount > 0) {
-          return { state: "behind", commitCount } as const
-        }
+      const exists = yield* fs.exists(dirPath)
 
-        return { state: "up to date" } as const
-      }),
-    }
+      if (!exists) {
+        return yield* clone(url)
+      }
+      return yield* pull(url)
+    })
+
+    return { clone, pull, sync }
   }),
 }) {}
