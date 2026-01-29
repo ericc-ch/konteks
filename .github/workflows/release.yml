@@ -15,11 +15,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: oven-sh/setup-bun@v2
+        # This shit is required because of npm oidc
+        # Im too lazy how to configure bun equivalent
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
-      - uses: oven-sh/setup-bun@v2
 
       - run: bun install --ignore-scripts
       - run: bun run build
@@ -28,4 +30,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - run: npm publish
+      - run: npm publish --ignore-scripts
