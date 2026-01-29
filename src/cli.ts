@@ -24,10 +24,7 @@ const sync = Command.make("sync", {}, () =>
       return
     }
 
-    yield* Effect.all(
-      repos.map((url) => git.sync(url)),
-      { concurrency: "unbounded" },
-    )
+    yield* Effect.all(repos.map((url) => git.sync(url)))
   }),
 )
 

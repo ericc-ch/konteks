@@ -41,12 +41,14 @@ export class Git extends Effect.Service<Git>()("Git", {
 
     const clone = Effect.fn(function* (url: string) {
       const { repo } = parseGithubUrl(url)
-      const { exitCode, stderr } = yield* Command.make(
+      const { exitCode, stderr, stdout } = yield* Command.make(
         "git",
         "clone",
         url,
         `${targetDir}/${repo}`,
       ).pipe(runGitCommand)
+
+      yield* Effect.log(`Cloned ${url}: ${stdout}`)
 
       if (exitCode !== 0) {
         return yield* new GitError({
@@ -58,12 +60,14 @@ export class Git extends Effect.Service<Git>()("Git", {
 
     const pull = Effect.fn(function* (url: string) {
       const { repo: repoName } = parseGithubUrl(url)
-      const { exitCode, stderr } = yield* Command.make(
+      const { exitCode, stderr, stdout } = yield* Command.make(
         "git",
         "-C",
         `${targetDir}/${repoName}`,
         "pull",
       ).pipe(runGitCommand)
+
+      yield* Effect.log(`Pulled ${url}: ${stdout}`)
 
       if (exitCode !== 0) {
         return yield* new GitError({
