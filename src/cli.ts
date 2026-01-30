@@ -1,10 +1,12 @@
 import { Command } from "@effect/cli"
 import { BunContext, BunRuntime } from "@effect/platform-bun"
 import { Effect, Layer, pipe } from "effect"
-
+import os from "node:os"
 import packageJson from "../package.json"
 import { Config } from "./services/config"
 import { Git } from "./services/git"
+
+const concurrency = os.availableParallelism() / 2
 
 const init = Command.make("init", {}, () =>
   Effect.gen(function* () {
@@ -24,7 +26,10 @@ const sync = Command.make("sync", {}, () =>
       return
     }
 
-    yield* Effect.all(repos.map((url) => git.sync(url)))
+    yield* Effect.all(
+      repos.map((url) => git.sync(url)),
+      { concurrency },
+    )
   }),
 )
 
